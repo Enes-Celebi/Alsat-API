@@ -2,7 +2,6 @@ from django.db import models
 from django.utils.timezone import now
 
 class User(models.Model):
-    # Custom user table
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255)
     full_name = models.CharField(max_length=100)
