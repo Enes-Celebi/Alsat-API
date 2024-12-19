@@ -16,10 +16,11 @@ class User(models.Model):
 
 
 class Item(models.Model):
-    name = models.CharField(max_length=255)
+    seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='items')
+    title = models.CharField(max_length=255)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    stock = models.PositiveIntegerField()
+    is_deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -28,65 +29,60 @@ class Item(models.Model):
         managed = True
 
     def __str__(self):
-        return self.name
+        return f"{self.title} by {self.seller.full_name}"
 
 
-class Cart(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cart')
+class ItemImage(models.Model):
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='images')  # Fixed field name: `item`
+    image = models.ImageField(upload_to='item_images/')
+
+    class Meta:
+        db_table = "item_images"
+        managed = True
+
+    def __str__(self):
+        return f"Image for {self.item.title}"  # Fixed field name: `item`
+
+
+class Chat(models.Model):
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_chats')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_chats')  # Fixed typo in `on_delete`
+    item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True, related_name='chats')
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        db_table = "carts"
+    class Meta: 
+        db_table = "chats"
         managed = True
+        unique_together = ['sender', 'receiver', 'item']
 
     def __str__(self):
-        return f"Cart for {self.user.email}"
+        item_name = self.item.title if self.item and not self.item.is_deleted else "Deleted Item"  # Fixed typo: `is_deleted`
+        return f"Chat between {self.sender.email} and {self.receiver.email} about {item_name}"
 
 
-class CartItem(models.Model):
-    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
-    item = models.ForeignKey(Item, on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField()
-
-    class Meta:
-        db_table = "cart_items"
-        managed = True
-
-    def __str__(self):
-        return f"{self.quantity} of {self.item.name}"
-
-
-class Order(models.Model):
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('shipped', 'Shipped'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled'),
-    ]
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+class Message(models.Model):
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages_sent')  # Fixed field name: `related_name`
+    content = models.TextField()
+    is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 
     class Meta:
-        db_table = "orders"
+        db_table = "messages"
         managed = True
 
     def __str__(self):
-        return f"Order {self.id} for {self.user.email}"
+        return f"Message from {self.sender.email} in chat {self.chat.id}"
 
 
-class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items')
-    item = models.ForeignKey(Item, on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+class Favorite(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='favorited_by')
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "order_items"
+        db_table = "favorites"
         managed = True
 
     def __str__(self):
-        return f"{self.quantity} of {self.item.name} in order {self.order.id}"
+        return f"{self.user.email} favorited {self.item.title}"
