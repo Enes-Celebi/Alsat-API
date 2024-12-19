@@ -11,6 +11,7 @@ def signup(email, password, full_name=None):
 
     return create_user(email=email, password=password, full_name=full_name)
 
+
 def signin(email, password):
     user = get_user_by_email(email)
 
@@ -18,13 +19,11 @@ def signin(email, password):
 
     if not user:
         raise ValueError("Invalid email or password.")
-    
-    print("Stored password hash:", user.password)
 
     if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-        print("Password is correct!")
+        token = generate_jwt_token(user)
+        return user, token
     else:
-        print("Password mismatch!")  
         raise ValueError("Invalid email or password.")
     
     return user
