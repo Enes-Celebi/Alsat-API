@@ -33,7 +33,7 @@ class Item(models.Model):
 
 
 class ItemImage(models.Model):
-    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='images')  # Fixed field name: `item`
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='images')  
     image = models.ImageField(upload_to='item_images/')
 
     class Meta:
@@ -41,12 +41,12 @@ class ItemImage(models.Model):
         managed = True
 
     def __str__(self):
-        return f"Image for {self.item.title}"  # Fixed field name: `item`
+        return f"Image for {self.item.title}" 
 
 
 class Chat(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_chats')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_chats')  # Fixed typo in `on_delete`
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_chats')  
     item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, blank=True, related_name='chats')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -56,13 +56,13 @@ class Chat(models.Model):
         unique_together = ['sender', 'receiver', 'item']
 
     def __str__(self):
-        item_name = self.item.title if self.item and not self.item.is_deleted else "Deleted Item"  # Fixed typo: `is_deleted`
+        item_name = self.item.title if self.item and not self.item.is_deleted else "Deleted Item"  
         return f"Chat between {self.sender.email} and {self.receiver.email} about {item_name}"
 
 
 class Message(models.Model):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='messages')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages_sent')  # Fixed field name: `related_name`
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages_sent')  
     content = models.TextField()
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
