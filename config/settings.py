@@ -16,10 +16,12 @@ ROOT_URLCONF = 'config.urls'
 
 INSTALLED_APPS = [
     'app',  
+    'django.contrib.auth',  
+    'django.contrib.contenttypes',  
     'django.contrib.sessions',  
-    'django.contrib.messages',  
+    'django.contrib.messages', 
     'django.contrib.staticfiles', 
-]
+    'rest_framework',  
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
