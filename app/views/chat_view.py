@@ -5,7 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from ..serializers.chat_serializer import ChatSerializer
 from ..serializers.message_serializer import MessageSerializer
 from ..services.chat_service import start_chat, send_message
-from ..models import Item
+from django.views.decorators.csrf import csrf_exempt
+from ..models import Item, Chat, Message
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -24,6 +25,7 @@ def start_chat_view(request, item_id):
     
 
 @api_view(['GET'])
+@csrf_exempt
 @permission_classes([IsAuthenticated])
 def get_chat_messages(request, chat_id):
     try:
@@ -40,6 +42,7 @@ def get_chat_messages(request, chat_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt
 def send_message_view(request, chat_id):
     try: 
         chat = Chat.objects.get(id=chat_id)

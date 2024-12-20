@@ -79,3 +79,25 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
+
+CSRF_EXEMPT_PATHS = [
+    "/api/",
+]
+
+class CsrfExemptMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        exempt_paths = [
+            "/api/chat/start-chat/",
+            "/api/chat/",  
+        ]
+        for exempt_path in exempt_paths:
+            if request.path.startswith(exempt_path):
+                setattr(request, "_dont_enforce_csrf_checks", True)
+                break
+        return self.get_response(request)
+
+MIDDLEWARE += ["config.settings.CsrfExemptMiddleware"]
+
