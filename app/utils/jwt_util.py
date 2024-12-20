@@ -1,3 +1,5 @@
+from rest_framework_simplejwt.tokens import RefreshToken
+
 import jwt
 import datetime
 from django.conf import settings
@@ -6,24 +8,28 @@ from ..models import User
 TOKEN_EXPIRATION_TIME = datetime.timedelta(hours=1)
 
 def generate_jwt_token(user):
-    payload = {
-        "user_id": user.id,
-        "email": user.email,
-        "exp": datetime.datetime.utcnow() + TOKEN_EXPIRATION_TIME,
-        'iat': datetime.datetime.utcnow() 
+    refresh = RefreshToken.for_user(user)  
+    return {
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
     }
 
-    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
-    return token
+from rest_framework_simplejwt.tokens import AccessToken
+from django.core.exceptions import ObjectDoesNotExist
 
 def decode_jwt(token):
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-        user = User.objects.get(id=payload['user_id'])
+        payload = AccessToken(token)
+
+        user_id = payload['user_id']
+
+        user = User.objects.get(id=user_id)
         return user
+
     except jwt.ExpiredSignatureError:
-        return None
+        raise ValueError("Token has expired.")
     except jwt.InvalidTokenError:
-        return None
-    except User.DoesNotExist:
-        return None
+        raise ValueError("Invalid token.")
+    except ObjectDoesNotExist:
+        raise ValueError("User not found.")
+

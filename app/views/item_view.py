@@ -8,26 +8,16 @@ from ..services.item_service import create_item, get_items_filtered
 from ..utils.jwt_util import decode_jwt
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def post_item(request):
-    if request.method == 'POST':
-        token = request.headers.get('Authorization', '').split(' ')[-1]
-
-        if not token: 
-            return Response({"error": "Token is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        user = decode_jwt(token)
-        
-        if not user:
-            return Response({"error": "Invalid or expired token."}, status=status.HTTP_401_UNAUTHORIZED)
-
-        serializer = ItemSerializer(data=request.data, context={'request': request})
-
-        if serializer.is_valid():
-            item = create_item(user, serializer.validated_data)
-            return Response({"message": "Item posted successfully", "item_id": item.id}, status=status.HTTP_201_CREATED)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    user = request.user  
+    serializer = ItemSerializer(data=request.data, context={'request': request})
+    if serializer.is_valid():
+        item = create_item(user, serializer.validated_data)
+        return Response({"message": "Item posted successfully", "item_id": item.id}, 
+                      status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 @api_view(['GET'])
 def get_items(request):

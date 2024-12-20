@@ -5,7 +5,7 @@ from .item_serializer import ItemSerializer
 
 class ChatSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)
-    receiver UserSerializer(read_only=True)
+    receiver = UserSerializer(read_only=True)
     item = ItemSerializer(read_only=True)
 
     class Meta:
