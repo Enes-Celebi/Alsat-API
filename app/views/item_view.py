@@ -35,24 +35,6 @@ def get_items(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def get_user_items(request, user_id=None):
-    try:
-        if user_id is None:
-            items = fetch_user_items(authenticated_user=request.user)
-        else:
-            items = fetch_user_items(user_id=user_id)
-    except ValueError as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    if not items.exists():
-        return Response({"error": "No items found."}, status=status.HTTP_404_NOT_FOUND)
-
-    serialized_items = ItemSerializer(items, many=True)
-    return Response(serialized_items.data, status=status.HTTP_200_OK)
-
-
 @api_view(['GET', 'PATCH'])
 @permission_classes([AllowAny])
 def user_items_view(request, user_id=None, item_id=None):

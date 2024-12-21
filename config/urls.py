@@ -1,6 +1,6 @@
 from django.urls import path
 from app.views.auth_view import signup_view, signin_view
-from app.views.item_view import post_item, get_items, get_user_items, user_items_view
+from app.views.item_view import post_item, get_items, user_items_view
 from app.views.chat_view import start_chat_view, get_chat_messages, send_message_view
 
 urlpatterns = [
