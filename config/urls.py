@@ -1,6 +1,6 @@
 from django.urls import path
 from app.views.auth_view import signup_view, signin_view
-from app.views.item_view import post_item, get_items, get_user_items
+from app.views.item_view import post_item, get_items, get_user_items, user_items_view
 from app.views.chat_view import start_chat_view, get_chat_messages, send_message_view
 
 urlpatterns = [
@@ -9,8 +9,9 @@ urlpatterns = [
 
     path('api/item/post-item', post_item, name='post-item'),
     path('api/item/browse-items', get_items, name='get_items'),
-    path('api/items/', get_user_items, name='own-items'),  
-    path('api/items/<int:user_id>/', get_user_items, name='user-items'), 
+    path('api/items/', user_items_view, name='get_own-items'),  
+    path('api/items/<int:user_id>/', user_items_view, name='get_user_items'), 
+    path('api/items/update/<int:item_id>/', user_items_view, name='update_item'),
 
 
     path('api/chat/start-chat/<int:item_id>/', start_chat_view, name='start-chat'),

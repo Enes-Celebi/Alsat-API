@@ -32,3 +32,22 @@ def fetch_user_items(user_id=None, authenticated_user=None):
 
     return items
 
+
+def get_my_listings(user):
+    return Item.objects.filter(seller=user, is_deleted=False)
+
+
+def update_user_item(item_id, user, update_data):
+    try:
+        item = Item.objects.get(id=item_id, seller=user)
+
+        for field, value in  update_data.items():
+            if hasattr(item, field):
+                setattr(item, field, value)
+
+        item.save()
+        return item
+
+    except Item.DoesNotExist:
+        raise Item.DoesNotExist(f"Item with ID {item_id} does not exist.")
+
