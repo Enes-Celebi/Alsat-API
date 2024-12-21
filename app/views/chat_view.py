@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from ..serializers.chat_serializer import ChatSerializer
 from ..serializers.message_serializer import MessageSerializer
-from ..services.chat_service import start_chat, send_message
+from ..services.chat_service import start_chat, send_message, mark_messages_as_read
 from django.views.decorators.csrf import csrf_exempt
 from ..models import Item, Chat, Message
 
@@ -35,6 +35,8 @@ def get_chat_messages(request, chat_id):
 
     if request.user not in [chat.sender, chat.receiver]:
         return Response({"error": "You are not a participant in this chat."}, statis=status.HTTP_403_FORBIDDEN)
+
+    mark_messages_as_read(chat, request.user)
 
     messages = Message.objects.filter(chat=chat).order_by('created_at')
     return Response(MessageSerializer(messages, many=True).data)
