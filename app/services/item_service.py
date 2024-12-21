@@ -51,3 +51,17 @@ def update_user_item(item_id, user, update_data):
     except Item.DoesNotExist:
         raise Item.DoesNotExist(f"Item with ID {item_id} does not exist.")
 
+
+def delete_user_item(item_id, authenticated_user):
+    try:
+        item = Item.objects.get(id=item_id)
+    except Item.DoesNotExist:
+        raise ValueError("Item not found.")
+
+    if item.seller != authenticated_user:
+        raise PermissionError("You are not authorized to delete this item.")
+
+    item.delete()
+
+    return item
+

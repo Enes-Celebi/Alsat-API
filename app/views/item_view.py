@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from ..serializers.item_serializer import ItemSerializer
-from ..services.item_service import create_item, get_items_filtered, fetch_user_items, update_user_item
+from ..services.item_service import create_item, get_items_filtered, fetch_user_items, update_user_item, delete_user_item
 from ..utils.jwt_util import decode_jwt
 from app.models import Item
 
@@ -77,6 +77,20 @@ def user_items_view(request, user_id=None, item_id=None):
             return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
             return Response({"error": f"An unknown error occured: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_item_view(request, item_id):
+    try: 
+        item = delete_user_item(item_id, request.user)
+    except ValueError as e:
+        return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+    except PermissionError as e:
+        return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+
+    return Response({"message": "Item successfully deleted."}, status=status.HTTP_200_OK)
+
 
 
 
