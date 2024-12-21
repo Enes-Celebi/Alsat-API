@@ -4,7 +4,7 @@ from ..models import Item
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
-        fields = ['title', 'description', 'price', 'is_deleted']  
+        fields = ['id', 'title', 'description', 'price', 'is_deleted']  
 
     def create(self, validated_data):
         user = self.context['request'].user  
