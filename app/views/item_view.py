@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from ..serializers.item_serializer import ItemSerializer
-from ..services.item_service import create_item, get_items_filtered, fetch_user_items, update_user_item, delete_user_item
+from ..services.item_service import create_item, get_items_filtered, fetch_user_items, update_user_item, delete_user_item, get_item_by_id
 from ..utils.jwt_util import decode_jwt
 from app.models import Item
 
@@ -92,8 +92,13 @@ def delete_item_view(request, item_id):
     return Response({"message": "Item successfully deleted."}, status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_item_by_id_view(request, item_id):
+    item = get_item_by_id(item_id)
 
+    if item is None:
+        return Response({"error": "Item not found."}, status=status.HTTP_404_NOT_FOUND)
 
-
-
-
+    serialized_item = ItemSerializer(item)
+    return Response(serialized_item.data, status=status.HTTP_200_OK) 

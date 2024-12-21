@@ -65,3 +65,10 @@ def delete_user_item(item_id, authenticated_user):
 
     return item
 
+
+def get_item_by_id(item_id):
+    try:
+        item = Item.objects.get(id=item_id)
+        return item
+    except Item.DoesNotExist:
+        return None
