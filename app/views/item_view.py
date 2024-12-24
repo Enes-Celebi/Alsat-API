@@ -28,8 +28,16 @@ def get_items(request):
     title = request.query_params.get('title', None)
     min_price = request.query_params.get('min_price', None)
     max_price = request.query_params.get('max_price', None)
+    sort = request.query_params.get('sort', None)
 
     items = get_items_filtered(title=title, min_price=min_price, max_price=max_price)
+
+    if sort == "low_to_high":
+        items = items.order_by("price")
+    elif sort == "high_to_low":
+        items = items.order_by("-price")
+    elif sort == "newest":
+        items = items.order_by("-created_at")
 
     serializer = ItemSerializer(items, many=True)
 
