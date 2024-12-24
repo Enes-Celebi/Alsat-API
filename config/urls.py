@@ -12,7 +12,7 @@ urlpatterns = [
     path('api/item/browse-items', get_items, name='get_items'),
     path('api/items/', user_items_view, name='get_own-items'),  
     path('api/items/<int:user_id>/', user_items_view, name='get_user_items'), 
-    path('api/items/update/<int:item_id>/', user_items_view, name='update_item'),
+    path('api/items/update/<int:item_id>', user_items_view, name='update_item'),
     path('api/items/delete/<int:item_id>/', delete_item_view, name='delete_item'),
     path('api/item/<int:item_id>/', get_item_by_id_view, name='get_item_by_id'),
 

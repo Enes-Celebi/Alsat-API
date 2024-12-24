@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import PermissionDenied
 from ..serializers.item_serializer import ItemSerializer
 from ..services.item_service import create_item, get_items_filtered, fetch_user_items, update_user_item, delete_user_item, get_item_by_id
 from ..utils.jwt_util import decode_jwt
