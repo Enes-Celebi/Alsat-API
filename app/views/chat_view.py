@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from ..serializers.chat_serializer import ChatSerializer
 from ..serializers.message_serializer import MessageSerializer
-from ..services.chat_service import start_chat, send_message, mark_messages_as_read
+from ..services.chat_service import start_chat, send_message, mark_messages_as_read, get_user_chats
 from django.views.decorators.csrf import csrf_exempt
 from ..models import Item, Chat, Message
 
@@ -60,3 +60,19 @@ def send_message_view(request, chat_id):
     
     message = send_message(chat, request.user, content)
     return Response(MessageSerializer(message).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@csrf_exempt
+def get_user_chats_view(request):
+    user = request.user
+    chats = get_user_chats(user)
+
+    serialized_chats = []
+    for entry in chats:
+        chat_data = ChatSerializer(entry["chat"]).data
+        chat_data["role"] = entry["role"]
+        serialized_chats.append(chat_data)
+
+    return Response(serialized_chats, status=status.HTTP_200_OK)
