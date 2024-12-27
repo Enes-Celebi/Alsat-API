@@ -15,8 +15,8 @@ def send_message(chat, sender, content):
 
 
 def mark_messages_as_read(chat, receiver):
-    messages_to_update = Message.objects.filter(chat=chat, sender__neq=receiver, is_read=False)
-    messages_to_update.update(is_read=True)
+    messages_to_update = Message.objects.filter(chat=chat, is_read=False).exclude(sender=receiver)
+    messages_to_update.update(is_read=True)  # Mark them as read
 
     return messages_to_update
 
