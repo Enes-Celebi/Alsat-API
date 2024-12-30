@@ -38,9 +38,11 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
+    "https://165.154.212.176",  
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -99,7 +101,6 @@ REST_FRAMEWORK = {
     ],
 }
 
-
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
@@ -108,7 +109,6 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
 }
-
 
 CSRF_EXEMPT_PATHS = [
     "/api/",
@@ -131,3 +131,5 @@ class CsrfExemptMiddleware:
 
 MIDDLEWARE += ["config.settings.CsrfExemptMiddleware"]
 
+# ALLOWED_HOSTS - Allow external access from VPS IP and localhost
+ALLOWED_HOSTS = ['165.154.212.176', 'localhost', '127.0.0.1']
