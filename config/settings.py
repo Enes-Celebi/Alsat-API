@@ -1,13 +1,15 @@
 import os
 import environ
+import dj_database_url
 from datetime import timedelta
 
 env = environ.Env()
 
+# Load environment variables from the .env file
 environ.Env.read_env(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 
 DATABASES = {
-    'default': env.db('DATABASE_URL')
+    'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
 }
 
 SECRET_KEY = env('SECRET_KEY')
@@ -23,8 +25,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'rest_framework_simplejwt', 
-    'corsheaders' 
+    'rest_framework_simplejwt',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
@@ -42,7 +44,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
-
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -131,5 +132,4 @@ class CsrfExemptMiddleware:
 
 MIDDLEWARE += ["config.settings.CsrfExemptMiddleware"]
 
-# ALLOWED_HOSTS - Allow external access from VPS IP and localhost
 ALLOWED_HOSTS = ['165.154.212.176', 'localhost', '127.0.0.1']
