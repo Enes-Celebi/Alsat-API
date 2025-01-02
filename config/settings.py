@@ -43,6 +43,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://165.154.212.176",  
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://alsatbuysell.duckdns.org"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -132,4 +133,4 @@ class CsrfExemptMiddleware:
 
 MIDDLEWARE += ["config.settings.CsrfExemptMiddleware"]
 
-ALLOWED_HOSTS = ['165.154.212.176', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['165.154.212.176', 'localhost', '127.0.0.1', 'alsatbuysell.duckdns.org']
