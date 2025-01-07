@@ -18,19 +18,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Create deployment package
-        run: |
-          echo "Creating tar file..."
-          # Create a list of files to exclude
-          echo ".git" > exclude.txt
-          echo ".github" >> exclude.txt
-          echo "backend.tar.gz" >> exclude.txt
-          
-          # Use --warning=no-file-changed to ignore file changes
-          tar --warning=no-file-changed --exclude-from=exclude.txt -czf backend.tar.gz .
-          
-          echo "Checking tar file..."
-          ls -lh backend.tar.gz
+      - name: Install dependencies
+        run: pip install --upgrade pip setuptools wheel
 
       - name: Deploy to VPS
         env:
@@ -38,49 +27,57 @@ jobs:
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
         run: |
-          # Set up SSH
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          
-          echo "Copying files..."
-          scp -i ~/.ssh/id_rsa backend.tar.gz $SERVER_USER@$SERVER_IP:~/Alsat-API/
-          
-          echo "Executing deployment commands..."
-          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_IP << 'EOF'
+
+          # Transfer the codebase to the server
+          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -r * $SERVER_USER@$SERVER_IP:~/Alsat-API/
+
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP << 'EOF'
+            # Setup swap file if it doesn't exist
+            if [ ! -f /swapfile ]; then
+              sudo fallocate -l 2G /swapfile
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+            fi
+
             cd ~/Alsat-API
-            
-            echo "Stopping Gunicorn..."
-            pkill -f gunicorn || true
-            
-            echo "Backing up .env..."
-            cp .env .env.backup || true
-            
-            echo "Extracting new files..."
-            tar xzf backend.tar.gz
-            rm backend.tar.gz
-            
-            echo "Restoring .env..."
-            mv .env.backup .env || true
-            
-            echo "Setting up virtual environment..."
-            python3 -m venv venv || true
+
+            # Clean up any hanging Gunicorn processes
+            GUNICORN_PID=\$(ps aux | grep gunicorn | grep 'config.wsgi:application' | grep -v grep | awk '{print \$2}')
+            if [ -n "\$GUNICORN_PID" ]; then
+              echo "Killing Gunicorn PID \$GUNICORN_PID"
+              kill -9 \$GUNICORN_PID
+            fi
+
+            # Set up virtual environment
+            if [ ! -d venv ]; then
+              python3 -m venv venv
+            fi
             source venv/bin/activate
-            
-            echo "Installing dependencies..."
+
+            # Install Python dependencies
+            pip install --upgrade pip
             pip install -r requirements.txt
-            
-            echo "Running migrations..."
+
+            # Apply database migrations
             python manage.py migrate
 
-            echo 'Locating .env...'
-            export $(cat .env | xargs
-            
-            echo "Starting Gunicorn..."
-            nohup gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 3 > gunicorn.log 2>&1 &
-            
-            echo "Deployment completed"
-            
-            # Check process status
-            ps aux | grep gunicorn
+            # Collect static files
+            python manage.py collectstatic --noinput
+
+            # Locate .env rile
+            export $(cat .env | xargs) 
+
+            # Start Gunicorn
+            nohup gunicorn --workers 3 --bind 127.0.0.1:8000 config.wsgi:application > gunicorn.log 2>&1 &
+
+            # Monitor resources
+            echo "Current memory usage:"
+            free -h
+            echo "Disk usage:"
+            df -h
           EOF
