@@ -21,11 +21,18 @@ jobs:
       - name: Create deployment package
         run: |
           echo "Creating tar file..."
-          # Exclude .git and .github directories
-          tar --exclude='.git' --exclude='.github' -czf backend.tar.gz .
+          # Create a list of files to exclude
+          echo ".git" > exclude.txt
+          echo ".github" >> exclude.txt
+          echo "backend.tar.gz" >> exclude.txt
+          
+          # Use --warning=no-file-changed to ignore file changes
+          tar --warning=no-file-changed --exclude-from=exclude.txt -czf backend.tar.gz .
+          
+          echo "Checking tar file..."
           ls -lh backend.tar.gz
 
-      - name: Test SSH connection
+      - name: Deploy to VPS
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
@@ -36,44 +43,44 @@ jobs:
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Basic SSH test
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP "echo 'SSH connection test successful'"
-
-      - name: Deploy files
-        if: success()
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-        run: |
-          # Upload files
+          echo "Copying files..."
           scp -i ~/.ssh/id_rsa backend.tar.gz $SERVER_USER@$SERVER_IP:~/Alsat-API/
           
-          # Execute deployment commands
-          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_IP "
+          echo "Executing deployment commands..."
+          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_IP << 'EOF'
             cd ~/Alsat-API
-            echo 'Stopping Gunicorn...'
+            
+            echo "Stopping Gunicorn..."
             pkill -f gunicorn || true
             
-            echo 'Extracting files...'
+            echo "Backing up .env..."
+            cp .env .env.backup || true
+            
+            echo "Extracting new files..."
             tar xzf backend.tar.gz
             rm backend.tar.gz
             
-            echo 'Setting up virtual environment...'
+            echo "Restoring .env..."
+            mv .env.backup .env || true
+            
+            echo "Setting up virtual environment..."
             python3 -m venv venv || true
             source venv/bin/activate
             
-            echo 'Installing dependencies...'
+            echo "Installing dependencies..."
             pip install -r requirements.txt
             
-            echo 'Running migrations...'
+            echo "Running migrations..."
             python manage.py migrate
 
             echo 'Locating .env...'
             export $(cat .env | xargs
             
-            echo 'Starting Gunicorn...'
+            echo "Starting Gunicorn..."
             nohup gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 3 > gunicorn.log 2>&1 &
             
-            echo 'Deployment complete'
-          "
+            echo "Deployment completed"
+            
+            # Check process status
+            ps aux | grep gunicorn
+          EOF
