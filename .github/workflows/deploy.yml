@@ -10,38 +10,70 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Echo start
-        run: echo "Starting deployment workflow"
-
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Debug directory
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Directory contents:"
-          ls -la
-          echo "Environment check:"
-          env | grep -v -i key
-          echo "Python version:"
-          python3 --version
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-      - name: Check secrets
+      - name: Create deployment package
         run: |
-          echo "Checking if secrets are set (not showing values):"
-          if [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
-            echo "SSH_PRIVATE_KEY is set"
-          else
-            echo "SSH_PRIVATE_KEY is not set"
-          fi
-          if [ -n "${{ secrets.SERVER_USER }}" ]; then
-            echo "SERVER_USER is set"
-          else
-            echo "SERVER_USER is not set"
-          fi
-          if [ -n "${{ secrets.SERVER_IP }}" ]; then
-            echo "SERVER_IP is set"
-          else
-            echo "SERVER_IP is not set"
-          fi
+          echo "Creating tar file..."
+          # Exclude .git and .github directories
+          tar --exclude='.git' --exclude='.github' -czf backend.tar.gz .
+          ls -lh backend.tar.gz
+
+      - name: Test SSH connection
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+        run: |
+          # Set up SSH
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          
+          # Basic SSH test
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP "echo 'SSH connection test successful'"
+
+      - name: Deploy files
+        if: success()
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+        run: |
+          # Upload files
+          scp -i ~/.ssh/id_rsa backend.tar.gz $SERVER_USER@$SERVER_IP:~/Alsat-API/
+          
+          # Execute deployment commands
+          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_IP "
+            cd ~/Alsat-API
+            echo 'Stopping Gunicorn...'
+            pkill -f gunicorn || true
+            
+            echo 'Extracting files...'
+            tar xzf backend.tar.gz
+            rm backend.tar.gz
+            
+            echo 'Setting up virtual environment...'
+            python3 -m venv venv || true
+            source venv/bin/activate
+            
+            echo 'Installing dependencies...'
+            pip install -r requirements.txt
+            
+            echo 'Running migrations...'
+            python manage.py migrate
+
+            echo 'Locating .env...'
+            export $(cat .env | xargs
+            
+            echo 'Starting Gunicorn...'
+            nohup gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 3 > gunicorn.log 2>&1 &
+            
+            echo 'Deployment complete'
+          "
