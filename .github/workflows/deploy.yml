@@ -21,6 +21,9 @@ jobs:
       - name: Install dependencies
         run: pip install --upgrade pip setuptools wheel
 
+      - name: Compress project files
+        run: tar -czf backend.tar.gz .
+
       - name: Deploy to VPS
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -31,38 +34,49 @@ jobs:
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP << EOF
+          # Transfer the project files
+          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new backend.tar.gz $SERVER_USER@$SERVER_IP:~/Alsat-API/
+
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP << 'EOF'
             # Stop Gunicorn process
             echo "Stopping existing Gunicorn processes..."
-            GUNICORN_PID=\$(ps aux | grep gunicorn | grep 'config.wsgi:application' | grep -v grep | awk '{print \$2}')
-            if [ -n "\$GUNICORN_PID" ]; then
-              echo "Killing Gunicorn PID \$GUNICORN_PID"
-              kill -9 \$GUNICORN_PID
-            else
-              echo "No Gunicorn process found."
+            pkill -f gunicorn || true
+
+            cd ~/Alsat-API
+
+            # Backup .env file
+            cp .env .env.backup
+
+            # Clean up old files and extract new ones
+            rm -rf *
+            tar xzf backend.tar.gz
+            rm backend.tar.gz
+
+            # Restore .env file
+            mv .env.backup .env
+
+            # Set up virtual environment if it doesn't exist
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
             fi
 
-            # Navigate to the backend directory
-            cd /home/ubuntu/Alsat-API
-
-            # Configure Git for SSH and pull latest code
-            git config --global user.name "Your Name"
-            git config --global user.email "your-email@example.com"
-            git config --global url."git@github.com:".insteadOf "https://github.com/"
-            git pull origin main
-
-            # Set up virtual environment
+            # Activate virtual environment
             source venv/bin/activate
 
             # Export environment variables from .env
             echo "Exporting environment variables..."
-            export \$(cat .env | xargs)
+            set -a
+            source .env
+            set +a
 
             # Install dependencies
             pip install -r requirements.txt
 
             # Run migrations
             python manage.py migrate
+
+            # Create static files directory if it doesn't exist
+            mkdir -p staticfiles
 
             # Collect static files
             python manage.py collectstatic --noinput
