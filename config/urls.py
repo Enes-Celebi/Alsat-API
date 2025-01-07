@@ -9,7 +9,7 @@ urlpatterns = [
     path('api/auth/signin', signin_view, name='signin'),
 
     path('api/item/post-item', post_item, name='post-item'),
-    path('api/item/browse-item', get_items, name='get_items'),
+    #path('api/item/browse-item', get_items, name='get_items'),
     path('api/items/', user_items_view, name='get_own-items'),  
     path('api/items/<int:user_id>/', user_items_view, name='get_user_items'), 
     path('api/items/update/<int:item_id>', user_items_view, name='update_item'),
