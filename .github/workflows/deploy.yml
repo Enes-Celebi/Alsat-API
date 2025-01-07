@@ -45,7 +45,10 @@ jobs:
             # Navigate to the backend directory
             cd /home/ubuntu/Alsat-API
 
-            # Pull latest code
+            # Configure Git for SSH and pull latest code
+            git config --global user.name "Your Name"
+            git config --global user.email "your-email@example.com"
+            git config --global url."git@github.com:".insteadOf "https://github.com/"
             git pull origin main
 
             # Set up virtual environment
