@@ -32,55 +32,56 @@ jobs:
           echo "PWD: $PWD"
           env
 
-      - name: Deploy to VPS
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+- name: Deploy to VPS
+  env:
+    SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    SERVER_USER: ${{ secrets.SERVER_USER }}
+    SERVER_IP: ${{ secrets.SERVER_IP }}
+  run: |
+    mkdir -p ~/.ssh
+    echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    chmod 600 ~/.ssh/id_rsa
 
-          # Transfer updated code to the VPS
-          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -r . $SERVER_USER@$SERVER_IP:~/Alsat-API/
+    # Transfer updated code to the VPS
+    scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -r * $SERVER_USER@$SERVER_IP:~/Alsat-API/
 
-          # Execute deployment commands on the VPS
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP << 'EOF'
-            # Stop running Gunicorn processes
-            echo "Stopping Gunicorn..."
-            GUNICORN_PID=\$(pgrep -f 'gunicorn.*config.wsgi:application')
-            if [ -n "\$GUNICORN_PID" ]; then
-              kill -9 \$GUNICORN_PID
-              echo "Gunicorn stopped."
-            else
-              echo "No Gunicorn process running."
-            fi
+    # Execute deployment commands on the VPS
+    ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP "bash -c ' 
+      echo \"Stopping Gunicorn...\"
+      GUNICORN_PID=\$(pgrep -f \"gunicorn.*config.wsgi:application\")
+      if [ -n \"\$GUNICORN_PID\" ]; then
+        kill -9 \$GUNICORN_PID
+        echo \"Gunicorn stopped.\"
+      else
+        echo \"No Gunicorn process running.\"
+      fi
 
-            # Navigate to the application directory
-            cd ~/Alsat-API
+      # Navigate to the application directory
+      cd ~/Alsat-API
 
-            # Activate virtual environment
-            source venv/bin/activate
+      # Activate virtual environment
+      source venv/bin/activate
 
-            # Pull updated environment variables
-            echo "Loading environment variables..."
-            export \$(cat .env | xargs)
+      # Pull updated environment variables
+      echo \"Loading environment variables...\"
+      export \$(cat .env | xargs)
 
-            # Install dependencies
-            pip install -r requirements.txt
+      # Install dependencies
+      pip install -r requirements.txt
 
-            # Apply database migrations
-            echo "Applying migrations..."
-            python manage.py migrate
+      # Apply database migrations
+      echo \"Applying migrations...\"
+      python manage.py migrate
 
-            # Collect static files
-            echo "Collecting static files..."
-            python manage.py collectstatic --noinput
+      # Collect static files
+      echo \"Collecting static files...\"
+      python manage.py collectstatic --noinput
 
-            # Start Gunicorn
-            echo "Starting Gunicorn..."
-            nohup gunicorn --workers 3 --bind 127.0.0.1:8000 config.wsgi:application > gunicorn.log 2>&1 &
+      # Start Gunicorn
+      echo \"Starting Gunicorn...\"
+      nohup gunicorn --workers 3 --bind 127.0.0.1:8000 config.wsgi:application > gunicorn.log 2>&1 &
+      echo \"Backend deployment completed successfully.\"
+    '"
 
-            echo "Backend deployment completed successfully."
-          EOF
+
+          
