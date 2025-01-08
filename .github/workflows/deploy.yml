@@ -33,7 +33,7 @@ jobs:
           env
 
       - name: Deploy to VPS
-        if: always()  
+        if: always()
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
@@ -47,14 +47,14 @@ jobs:
           scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -r * $SERVER_USER@$SERVER_IP:~/Alsat-API/
 
           # Execute deployment commands on the VPS
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP "bash -c ' 
-            echo \"Stopping Gunicorn...\"
-            GUNICORN_PID=\$(pgrep -f \"gunicorn.*config.wsgi:application\")
-            if [ -n \"\$GUNICORN_PID\" ]; then
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP "bash -c \"
+            echo 'Stopping Gunicorn...'
+            GUNICORN_PID=\$(pgrep -f 'gunicorn.*config.wsgi:application')
+            if [ -n '\$GUNICORN_PID' ]; then
               kill -9 \$GUNICORN_PID
-              echo \"Gunicorn stopped.\"
+              echo 'Gunicorn stopped.'
             else
-              echo \"No Gunicorn process running.\"
+              echo 'No Gunicorn process running.'
             fi
 
             # Navigate to the application directory
@@ -64,22 +64,25 @@ jobs:
             source venv/bin/activate
 
             # Pull updated environment variables
-            echo \"Loading environment variables...\"
+            echo 'Loading environment variables...'
             export \$(cat .env | xargs)
 
             # Install dependencies
             pip install -r requirements.txt
 
             # Apply database migrations
-            echo \"Applying migrations...\"
+            echo 'Applying migrations...'
             python manage.py migrate
 
             # Collect static files
-            echo \"Collecting static files...\"
+            echo 'Collecting static files...'
             python manage.py collectstatic --noinput
 
+            # pulling updated.env file
+            export $(cat .env | xargs)
+
             # Start Gunicorn
-            echo \"Starting Gunicorn...\"
+            echo 'Starting Gunicorn...'
             nohup gunicorn --workers 3 --bind 127.0.0.1:8000 config.wsgi:application > gunicorn.log 2>&1 &
-            echo \"Backend deployment completed successfully.\"
-          '"
+            echo 'Backend deployment completed successfully.'
+          \""
