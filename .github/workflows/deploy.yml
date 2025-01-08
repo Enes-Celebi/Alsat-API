@@ -78,6 +78,9 @@ jobs:
       echo \"Collecting static files...\"
       python manage.py collectstatic --noinput
 
+      # Locating .env
+      export $(cat .env | xargs)
+
       # Start Gunicorn
       echo \"Starting Gunicorn...\"
       nohup gunicorn --workers 3 --bind 127.0.0.1:8000 config.wsgi:application > gunicorn.log 2>&1 &
