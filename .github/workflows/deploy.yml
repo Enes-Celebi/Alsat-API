@@ -43,7 +43,6 @@ jobs:
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # Transfer updated code to the VPS
           scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -r * $SERVER_USER@$SERVER_IP:~/Alsat-API/
 
           # Execute deployment commands on the VPS
