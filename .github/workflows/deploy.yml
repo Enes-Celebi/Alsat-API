@@ -43,6 +43,7 @@ jobs:
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
+          # Transfer updated code to the VPS
           scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -r * $SERVER_USER@$SERVER_IP:~/Alsat-API/
 
           # Execute deployment commands on the VPS
@@ -62,7 +63,7 @@ jobs:
             # Activate virtual environment
             source venv/bin/activate
 
-            # Pull updated environment variables
+            # Pull updated environment variables.
             echo 'Loading environment variables...'
             export \$(cat .env | xargs)
 
@@ -85,3 +86,4 @@ jobs:
             nohup gunicorn --workers 3 --bind 127.0.0.1:8000 config.wsgi:application > gunicorn.log 2>&1 &
             echo 'Backend deployment completed successfully.'
           \""
+
