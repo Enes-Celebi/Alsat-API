@@ -16,23 +16,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.12'  # Update to the Python version you're using
+          python-version: '3.12'  # Match your Python version
 
-      - name: Install dependencies
+      - name: Install dependencies for workflow
         run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt
-
-      - name: Apply database migrations
-        run: |
-          source venv/bin/activate
-          python manage.py migrate
-
-      - name: Collect static files
-        run: |
-          source venv/bin/activate
-          python manage.py collectstatic --noinput
+          python -m pip install --upgrade pip
+          pip install paramiko  # For SSH and SCP, if needed in the script
 
       - name: Deploy to VPS
         env:
@@ -40,33 +29,37 @@ jobs:
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
         run: |
+          # Prepare SSH
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # Transfer the Django project files
-          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -r . $SERVER_USER@$SERVER_IP:~/Alsat-API/
+          # Transfer the project files
+          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -r * $SERVER_USER@$SERVER_IP:~/Alsat-API/
 
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP << 'EOF'
-            # Setup swap file if it doesn't exist
-            if [ ! -f /swapfile ]; then
-              sudo fallocate -l 2G /swapfile
-              sudo chmod 600 /swapfile
-              sudo mkswap /swapfile
-              sudo swapon /swapfile
-              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-            fi
-
+            # Navigate to the project directory
             cd ~/Alsat-API
 
             # Activate virtual environment
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv  # Create venv if not already created
+            fi
             source venv/bin/activate
 
-            # Stop current PM2 process
+            # Upgrade pip and install dependencies
+            pip install --upgrade pip
+            pip install -r requirements.txt
+
+            # Run migrations
+            python manage.py migrate
+
+            # Collect static files
+            python manage.py collectstatic --noinput
+
+            # Restart the Gunicorn process via PM2
             pm2 stop alsat-backend || true
             pm2 delete alsat-backend || true
-
-            # Restart Gunicorn with PM2
             pm2 start $(which gunicorn) --name alsat-backend --interpreter python3 -- config.wsgi:application --bind 0.0.0.0:8000
 
             # Monitor resources
