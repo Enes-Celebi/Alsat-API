@@ -11,29 +11,30 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v2
         with:
-          python-version: '3.11'
-
-      - name: Check Python version
-        run: |
-          python --version
-          which python
+          python-version: '3.12'  # Update to the Python version you're using
 
       - name: Install dependencies
-        run: pip install --upgrade pip setuptools wheel
-
-      - name: Debug environment
         run: |
-          echo "HOME: $HOME"
-          echo "PWD: $PWD"
-          env
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Apply database migrations
+        run: |
+          source venv/bin/activate
+          python manage.py migrate
+
+      - name: Collect static files
+        run: |
+          source venv/bin/activate
+          python manage.py collectstatic --noinput
 
       - name: Deploy to VPS
-        if: always()
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
@@ -43,47 +44,34 @@ jobs:
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # Transfer updated code to the VPS
-          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -r * $SERVER_USER@$SERVER_IP:~/Alsat-API/
+          # Transfer the Django project files
+          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new -r . $SERVER_USER@$SERVER_IP:~/Alsat-API/
 
-          # Execute deployment commands on the VPS
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP "bash -c \"
-            echo 'Stopping Gunicorn...'
-            GUNICORN_PID=\$(pgrep -f 'gunicorn.*config.wsgi:application')
-            if [ -n '\$GUNICORN_PID' ]; then
-              kill -9 \$GUNICORN_PID
-              echo 'Gunicorn stopped.'
-            else
-              echo 'No Gunicorn process running.'
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new $SERVER_USER@$SERVER_IP << 'EOF'
+            # Setup swap file if it doesn't exist
+            if [ ! -f /swapfile ]; then
+              sudo fallocate -l 2G /swapfile
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
             fi
 
-            # Navigate to the application directory
             cd ~/Alsat-API
 
             # Activate virtual environment
             source venv/bin/activate
 
-            # Pull updated environment variables.
-            echo 'Loading environment variables...'
-            export \$(cat .env | xargs)
+            # Stop current PM2 process
+            pm2 stop alsat-backend || true
+            pm2 delete alsat-backend || true
 
-            # Install dependencies
-            pip install -r requirements.txt
+            # Restart Gunicorn with PM2
+            pm2 start $(which gunicorn) --name alsat-backend --interpreter python3 -- config.wsgi:application --bind 0.0.0.0:8000
 
-            # Apply database migrations
-            echo 'Applying migrations...'
-            python manage.py migrate
-
-            # Collect static files
-            echo 'Collecting static files...'
-            python manage.py collectstatic --noinput
-
-            # pulling updated.env file
-            export $(cat .env | xargs)
-
-            # Start Gunicorn
-            echo 'Starting Gunicorn...'
-            nohup gunicorn --workers 3 --bind 127.0.0.1:8000 config.wsgi:application > gunicorn.log 2>&1 &
-            echo 'Backend deployment completed successfully.'
-          \""
-
+            # Monitor resources
+            echo "Current memory usage:"
+            free -h
+            echo "Disk usage:"
+            df -h
+          EOF
