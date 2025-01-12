@@ -1,7 +1,7 @@
 import bcrypt
 import logging
 from app.repositories.user_repository import create_user, get_user_by_email
-from app.utils.jwt_util import generate_jwt_token
+from app.utils.jwt_util import generate_jwt_token, generate_refresh_token, decode_refresh_token
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +15,6 @@ def signup(email, password, full_name=None):
 def signin(email, password):
     user = get_user_by_email(email)
 
-    print("User found:", user)
-
     if not user:
         raise ValueError("Invalid email or password.")
 
@@ -27,3 +25,16 @@ def signin(email, password):
         raise ValueError("Invalid email or password.")
     
     return user
+
+
+def refresh_access_token(refresh_token):
+    user = decode_refresh_token(refresh_token)
+    if user:
+        return generate_jwt_token(user)
+    else:
+        raise ValueError("Invalid or expired refresh token.")
+
+
+def logout_user(response):
+    response.delete_cookie('refresh_token', httponly=True, secure=True)
+    response.delete_cookie('access_token', httponly=True, secure=True)
