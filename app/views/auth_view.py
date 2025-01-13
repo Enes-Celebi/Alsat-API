@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from app.services.auth_service import signup, signin, refresh_access_token, logout_user
 from app.serializers.user_serializer import UserSerializer
-from django.http import HttpResponse
 import datetime
 
 REFRESH_TOKEN_EXPIRATION = datetime.timedelta(days=7)
@@ -29,6 +28,8 @@ def signup_view(request):
         except Exception as e:
             return Response({"error": "An unexpected error occurred.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+from rest_framework.response import Response
+
 @api_view(['POST'])
 @permission_classes([AllowAny])  
 def signin_view(request):
@@ -41,14 +42,21 @@ def signin_view(request):
     try:
         user, tokens = signin(email, password)
 
-        response = HttpResponse({"message": "Login successful", "user_id": user.id, "token": tokens})
-        response.set_cookie('refresh_token', tokens['refresh'], httponly=True, secure=True, max_age=REFRESH_TOKEN_EXPIRATION)
-        response.set_cookie('access_token', tokens['access'], httponly=True, secure=True)
-        return response
+        return Response({
+            "message": "Login successful",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.full_name
+            }
+        }, status=status.HTTP_200_OK, headers={
+            "Set-Cookie": f"refresh_token={tokens['refresh']}; HttpOnly; Secure; Path=/; Max-Age={REFRESH_TOKEN_EXPIRATION}",
+            "Set-Cookie": f"access_token={tokens['access']}; HttpOnly; Secure; Path=/;"
+        })
     except ValueError as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response({"error": "An unexpected error occured.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"error": "An unexpected error occurred.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
