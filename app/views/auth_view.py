@@ -1,10 +1,13 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny  
-from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework import status
 from app.services.auth_service import signup, signin, refresh_access_token, logout_user
 from app.serializers.user_serializer import UserSerializer
-from app.utils.jwt_util import generate_jwt_token
+from django.http import HttpResponse
+import datetime
+
+REFRESH_TOKEN_EXPIRATION = datetime.timedelta(days=7)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  
