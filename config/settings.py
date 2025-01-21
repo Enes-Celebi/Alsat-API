@@ -5,7 +5,6 @@ from datetime import timedelta
 
 env = environ.Env()
 
-# Load environment variables from the .env file
 environ.Env.read_env(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 
 DATABASES = {
@@ -30,7 +29,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Move this to the top
+    'corsheaders.middleware.CorsMiddleware',  
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -92,7 +91,6 @@ TEMPLATES = [
 
 STATIC_URL = '/static/'
 
-#STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

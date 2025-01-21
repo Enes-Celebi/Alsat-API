@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from app.services.auth_service import signup, signin, refresh_access_token, logout_user
@@ -83,3 +83,14 @@ def logout_view(request):
     response = HttpResponse({"message": "Logged out successfully"})
     logout_user(response)
     return response
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_info(request):
+    user = request.user
+    return Response({
+        "id": user.id,
+        "email": user.email,
+        "name": user.full_name
+    })

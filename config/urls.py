@@ -1,5 +1,5 @@
 from django.urls import path
-from app.views.auth_view import signup_view, signin_view, refresh_access_token_view, logout_view
+from app.views.auth_view import signup_view, signin_view, refresh_access_token_view, logout_view, user_info
 from app.views.item_view import post_item, get_items, user_items_view, delete_item_view, get_item_by_id_view
 from app.views.chat_view import start_chat_view, get_chat_messages, send_message_view, get_user_chats_view
 from app.views.user_view import get_user_by_id_view
@@ -9,6 +9,7 @@ urlpatterns = [
     path('api/auth/signin', signin_view, name='signin'),
     path('api/auth/refresh-token', refresh_access_token_view, name='refresh-token'),
     path('api/auth/logout', logout_view, name='logout'),
+    path('api/auth/user-info', user_info, name='user-info'),
 
     path('api/item/post-item', post_item, name='post-item'),
     path('api/item/browse-items', get_items, name='get_items'),
